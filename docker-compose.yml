@@ -1,0 +1,80 @@
+# ============================================
+#  МТМУ — Системаи қабули хонандагон
+#  Деплойи "под ключ" бо Docker Compose
+# ============================================
+services:
+  # --- Базаи маълумот ---
+  db:
+    image: mysql:8.0
+    container_name: mtmu_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-school_admission}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_HOST: '%'
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-secret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mtmu
+
+  # --- PHP-FPM (Laravel) ---
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mtmu_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_DATABASE: ${DB_DATABASE:-school_admission}
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - storage_data:/var/www/html/storage/app/public
+    networks:
+      - mtmu
+
+  # --- Nginx барои Backend (API) ---
+  backend:
+    image: nginx:1.27-alpine
+    container_name: mtmu_backend
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - ./backend/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./backend:/var/www/html:ro
+    networks:
+      - mtmu
+
+  # --- Frontend (Vue SPA + Nginx) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mtmu_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    networks:
+      - mtmu
+
+volumes:
+  db_data:
+  storage_data:
+
+networks:
+  mtmu:
+    driver: bridge

@@ -1,0 +1,7 @@
+# Скриптҳои shell ҳамеша бо LF (то дар Windows-checkout вайрон нашаванд)
+*.sh text eol=lf
+backend/docker/entrypoint.sh text eol=lf
+backend/artisan text eol=lf
+
+# Стандарти умумӣ
+* text=auto
