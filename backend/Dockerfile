@@ -41,9 +41,10 @@ RUN composer dump-autoload --optimize --no-dev \
 # OPcache барои продакшен
 COPY docker/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
-# Entrypoint
+# Entrypoint (CRLF → LF, то дар Windows-checkout вайрон нашавад)
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 9000
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
